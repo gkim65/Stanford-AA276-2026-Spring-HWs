@@ -1,6 +1,6 @@
 # Stanford AA276: Principles of Safety-Critical Autonomy, Spring 2026
 
-## Homework 1
+## Homework 1 (Problem 4)
 
 In this homework assignment, you will gain experience working with an off-the-shelf<br>
 neural CBF library and training your own neural CBFs for a 13D quadrotor system!
@@ -15,7 +15,7 @@ Also remember to answer and submit the writeup questions.
 
 ## Environment Setup
 
-First, you should follow `../README.md`, which is located in the [previous directory](..).<br>
+First, you should follow `../README.md`, which is located in the previous directory.
 Create your VM on Google Compute Engine following [this tutorial](https://docs.google.com/document/d/1btNdbHUv_ErEz2ccBMA5xL8scMc3octeCv9BheKb0wQ/edit?usp=sharing).
 
 You can maintain two different virtual environments for running the **test scripts** (locally)<br>
