@@ -24,7 +24,7 @@ print()
 
 
 print('TESTING euler_step...')
-with open('tests/part2/euler_step_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part2/euler_step_test_cases.pickle', 'rb') as f:
     euler_step_test_cases = pickle.load(f)
 run_tests(euler_step, euler_step_test_cases)
 print()
@@ -41,7 +41,7 @@ def u_fn(x):
 
 
 print('TESTING roll_out...')
-with open('tests/part2/roll_out_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part2/roll_out_test_cases.pickle', 'rb') as f:
     roll_out_test_cases = pickle.load(f)
     for case in roll_out_test_cases:
         case['args'] = tuple([case['args'][i] if i != 1 else u_fn for i in range(len(case['args']))])
@@ -50,7 +50,7 @@ print()
 
 
 print('TESTING u_qp...')
-with open('tests/part2/u_qp_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part2/u_qp_test_cases.pickle', 'rb') as f:
     u_qp_test_cases = pickle.load(f)
 run_tests(u_qp, u_qp_test_cases)
 print()

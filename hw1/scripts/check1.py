@@ -28,35 +28,35 @@ print()
 
 
 print('TESTING state_limits...')
-with open('tests/part1/state_limits_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part1/state_limits_test_cases.pickle', 'rb') as f:
     state_limits_test_cases = pickle.load(f)
 run_tests(state_limits, state_limits_test_cases)
 print()
 
 
 print('TESTING control_limits...')
-with open('tests/part1/control_limits_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part1/control_limits_test_cases.pickle', 'rb') as f:
     control_limits_test_cases = pickle.load(f)
 run_tests(control_limits, control_limits_test_cases)
 print()
 
 
 print('TESTING safe_mask...')
-with open('tests/part1/safe_mask_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part1/safe_mask_test_cases.pickle', 'rb') as f:
     safe_mask_test_cases = pickle.load(f)
 run_tests(safe_mask, safe_mask_test_cases)
 print()
 
 
 print('TESTING failure_mask...')
-with open('tests/part1/failure_mask_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part1/failure_mask_test_cases.pickle', 'rb') as f:
     failure_mask_test_cases = pickle.load(f)
 run_tests(failure_mask, failure_mask_test_cases)
 print()
 
 
 print('TESTING g...')
-with open('tests/part1/g_test_cases.pickle', 'rb') as f:
+with open('autograder/tests/part1/g_test_cases.pickle', 'rb') as f:
     g_test_cases = pickle.load(f)
 run_tests(g, g_test_cases)
 print()
