@@ -32,7 +32,7 @@ Such outputs will be indicated clearly in the homework instructions.<br>
 For convenience, we strongly encourage you to maintain a consistent Python environment with the virtual environment manager<br>
 `python3-venv` and the package manager `python3-pip` to use across all homeworks. In each homework `README.md`, we will<br>
 specify the Python packages that you need in order to run the **test scripts**. We will also provide instructions on how to set up your<br>
-virtual environment in the Google Compute Engine virtual machine, to run the **GPU-based scripts**.
+a Conda virtual environment in the Google Compute Engine virtual machine, to run the **GPU-based scripts**.
 
 Here are some (Linux) commands you might find useful:<br>
 `sudo apt install [package_name]` - install an OS package.<br>
