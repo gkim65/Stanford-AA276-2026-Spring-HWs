@@ -85,6 +85,36 @@ def failure_mask(x):
     return dist < 0.5
 
 
+def f(x):
+    """
+    Return the control-independent part of the control-affine dynamics.
+    Derived from the provided differential equations.
+    """
+    PXi, PYi, PZi, QWi, QXi, QYi, QZi, VXi, VYi, VZi, WXi, WYi, WZi = [i for i in range(13)]
+    PX, PY, PZ, QW, QX, QY, QZ, VX, VY, VZ, WX, WY, WZ = [x[:, i] for i in range(13)]
+
+    f = torch.zeros_like(x)
+    # Position dynamics: dot_p = v
+    f[:, PXi] = VX
+    f[:, PYi] = VY
+    f[:, PZi] = VZ
+    
+    # Quaternion dynamics
+    f[:, QWi] = -0.5 * (WX * QX + WY * QY + WZ * QZ)
+    f[:, QXi] =  0.5 * (WX * QW + WZ * QY - WY * QZ)
+    f[:, QYi] =  0.5 * (WY * QW - WZ * QX + WX * QZ)
+    f[:, QZi] =  0.5 * (WZ * QW + WY * QX - WX * QY)
+    
+    # Linear velocity drift: Gravity only in Z-direction
+    f[:, VZi] = -9.8
+    
+    # Angular velocity drift (gyroscopic terms)
+    f[:, WXi] = -5.0 * WY * WZ / 9.0
+    f[:, WYi] =  5.0 * WX * WZ / 9.0
+    # dot_wz has no drift term (purely alpha_z)
+    
+    return f
+
 def g(x):
     """
     Return the control-dependent part of the control-affine dynamics.
