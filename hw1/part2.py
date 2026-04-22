@@ -26,73 +26,82 @@ from part1 import f, g
 
 """Note: the following functions operate on batched inputs."""
 
-
 def euler_step(x, u, dt):
     """
-    Return the next states xn obtained after a discrete Euler step
-    for states x, controls u, and time step dt.
-    Hint: we have imported f(x) and g(x) from Part 1 for you to use.
-    
-    args:
-        x: torch float32 tensor with shape [batch_size, 13]
-        u: torch float32 tensor with shape [batch_size, 4]
-        dt: float
-        
-    returns:
-        xn: torch float32 tensor with shape [batch_size, 13]
+    Return the next states xn using a discrete Euler step.
     """
-    # YOUR CODE HERE
-    pass
+    # Dynamics: x_dot = f(x) + g(x) @ u
+    # Note: torch.bmm performs batch matrix multiplication
+    x_dot = f(x) + torch.bmm(g(x), u.unsqueeze(-1)).squeeze(-1)
+    
+    # Equation (3): x_{t+1} = x_t + dt * x_dot
+    xn = x + dt * x_dot
+    return xn
 
     
 def roll_out(x0, u_fn, nt, dt):
     """
-    Return the state trajectories xts obtained by rolling out the system
-    with nt discrete Euler steps using a time step of dt starting at
-    states x0 and applying the controller u_fn.
-    Note: The returned state trajectories should start with x1; i.e., omit x0.
-    Hint: You should use the previous function, euler_step(x, u, dt).
-
-    args:
-        x0: torch float32 tensor with shape [batch_size, 13]
-        u_fn: Callable u=u_fn(x)
-            u_fn takes a torch float32 tensor with shape [batch_size, 13]
-            and outputs a torch float32 tensor with shape [batch_size, 4]
-        nt: int
-        dt: float
-
-    returns:
-        xts: torch float32 tensor with shape [batch_size, nt, 13]
+    Return the state trajectories starting with x1.
     """
-    # YOUR CODE HERE
-    pass
-
+    xts = []
+    x_curr = x0
+    for _ in range(nt):
+        u = u_fn(x_curr)
+        x_curr = euler_step(x_curr, u, dt)
+        xts.append(x_curr)
+        
+    # Stack along the time dimension [batch_size, nt, 13]
+    return torch.stack(xts, dim=1)
 
 import cvxpy as cp
+import numpy as np
 from part1 import control_limits
-
 
 def u_qp(x, h, dhdx, u_ref, gamma, lmbda):
     """
-    Return the solution of the CBF-QP with parameters gamma and lmbda
-    for the states x, CBF values h, CBF gradients dhdx, and reference controls u_nom.
-    Hint: consider using CVXPY to solve the optimization problem: https://www.cvxpy.org/version/1.2/index.html
-        Note: We are using an older version of CVXPY (1.2.1) to use the neural CBF library.
-            Make sure you are looking at the correct version of documentation.
-        Note: You may want to use control_limits() from Part 1.
-    Hint: If you use multiple libraries, make sure to properly handle data-type conversions.
-        For example, to safely convert a torch tensor to a numpy array: x = x.detach().cpu().numpy()
-
-    args:
-        x: torch float32 tensor with shape [batch_size, 13]
-        h: torch float32 tensor with shape [batch_size]
-        dhdx: torch float32 tensor with shape [batch_size, 13]
-        u_ref: torch float32 tensor with shape [batch_size, 4]
-        gamma: float
-        lmbda: float
-
-    returns:
-        u_qp: torch float32 tensor with shape [batch_size, 4]
+    Solve the CBF-QP optimization.
     """
-    # YOUR CODE HERE
-    pass
+    batch_size = x.shape[0]
+    u_upper, u_lower = control_limits()
+    u_upper_np = u_upper.detach().cpu().numpy()
+    u_lower_np = u_lower.detach().cpu().numpy()
+    
+    # Pre-calculate Lie derivatives for efficiency
+    f_val = f(x) # [batch_size, 13]
+    g_val = g(x) # [batch_size, 13, 4]
+    
+    # Lf h = (dh/dx) * f(x)
+    Lfh = (dhdx * f_val).sum(dim=-1).detach().cpu().numpy()
+    # Lg h = (dh/dx) * g(x)
+    Lgh = torch.bmm(dhdx.unsqueeze(1), g_val).squeeze(1).detach().cpu().numpy()
+    
+    h_np = h.detach().cpu().numpy()
+    u_ref_np = u_ref.detach().cpu().numpy()
+    
+    u_results = []
+    
+    # Loop through batch as CVXPY 1.2 is not natively batched for GPUs
+    for i in range(batch_size):
+        u_var = cp.Variable(4)
+        delta_var = cp.Variable(1, nonneg=True) # delta >= 0
+        
+        # Equation (4): Minimize ||u - u_ref||^2 + lambda * delta^2
+        obj = cp.Minimize(cp.sum_squares(u_var - u_ref_np[i]) + lmbda * cp.square(delta_var))
+        
+        # Equation (5-7): Safety and Control Constraints
+        constraints = [
+            Lfh[i] + Lgh[i] @ u_var + gamma * h_np[i] + delta_var >= 0,
+            u_var >= u_lower_np,
+            u_var <= u_upper_np
+        ]
+        
+        prob = cp.Problem(obj, constraints)
+        prob.solve(solver=cp.OSQP, verbose=False)
+        
+        # Handle cases where the solver might fail by defaulting to u_ref
+        if u_var.value is None:
+            u_results.append(u_ref[i].cpu())
+        else:
+            u_results.append(torch.from_numpy(u_var.value).float())
+            
+    return torch.stack(u_results).to(x.device)
