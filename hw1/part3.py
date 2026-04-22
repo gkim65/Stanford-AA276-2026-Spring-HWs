@@ -31,27 +31,27 @@ import torch
 import matplotlib.pyplot as plt
 
 def plot_h(fig, ax, px, py, slice, h_fn):
-    # Create the coordinate grid for the position slice
-    # 'ij' indexing matches the [npx, npy] shape requirement
-    PX, PY = torch.meshgrid(px, py, indexing='ij')
+    # Remove the indexing='ij' argument for compatibility with the VM's PyTorch version
+    PX, PY = torch.meshgrid(px, py) 
+    
+    # The rest of the setup remains the same
     X = torch.zeros((len(px), len(py), 13))
     X[..., 0] = PX
     X[..., 1] = PY
     X[..., 2:] = slice[2:]
     
-    # Flatten grid for batch processing by the learned h_fn
+    # Reshape for the batch-processing h_fn
     X_flat = X.reshape(-1, 13)
     with torch.no_grad():
         h_vals = h_fn(X_flat).reshape(len(px), len(py))
         
-    # Colormap (RdYlGn: Red for low safety, Green for high safety)
-    # We transpose h_vals to match matplotlib's (y, x) display convention
+    # Plotting using the grid defined by px and py
     c = ax.pcolormesh(px.numpy(), py.numpy(), h_vals.numpy().T, cmap='RdYlGn', shading='auto')
     fig.colorbar(c, ax=ax, label='Learned $h(x)$')
     
-    # Bold Zero Level Set: The hard safety boundary
+    # Zero level set contour to indicate the safety boundary
     ax.contour(px.numpy(), py.numpy(), h_vals.numpy().T, levels=[0], colors='k', linewidths=2)
-
+    
 from part1 import safe_mask, failure_mask
 from part2 import roll_out, u_qp
 
