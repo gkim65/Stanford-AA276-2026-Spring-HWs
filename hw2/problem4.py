@@ -64,8 +64,22 @@ def optimal_control(x, dVdx):
     returns:
         u_opt: torch tensor with shape [batch_size, 4]
     """
-    # YOUR CODE HERE
-    pass
+    # Get control-dependent dynamics matrix g(x) [batch, 13, 4]
+    gx = g(x)
+    
+    # Compute the coefficients for the control: dVdx^T * g(x)
+    # dVdx is [batch, 13], gx is [batch, 13, 4] -> output [batch, 4]
+    coeff = torch.bmm(dVdx.unsqueeze(1), gx).squeeze(1)
+    
+    # Define control bounds based on the problem statement
+    # F in [-20, 20], alpha_x/y in [-8, 8], alpha_z in [-4, 4]
+    u_max = torch.tensor([20.0, 8.0, 8.0, 4.0], device=x.device)
+    u_min = torch.tensor([-20.0, -8.0, -8.0, -4.0], device=x.device)
+    
+    # Optimal control maximizes the value: pick max if coeff > 0, else min
+    u_opt = torch.where(coeff > 0, u_max, u_min)
+    
+    return u_opt
 
 def hamiltonian(x, dVdx):
     """
@@ -80,8 +94,20 @@ def hamiltonian(x, dVdx):
     returns:
         ham:  torch tensor with shape [batch_size]
     """
-    # YOUR CODE HERE
-    pass
+    fx = f(x)
+    gx = g(x)
+    u_opt = optimal_control(x, dVdx)
+    
+    # H = dVdx^T * f(x) + (dVdx^T * g(x)) * u_opt
+    # First term: Dot product of dVdx and f(x)
+    v_term = torch.sum(dVdx * fx, dim=-1)
+    
+    # Second term: (dVdx^T * g(x)) is the coeff from optimal_control
+    coeff = torch.bmm(dVdx.unsqueeze(1), gx).squeeze(1)
+    ctrl_term = torch.sum(coeff * u_opt, dim=-1)
+    
+    ham = v_term + ctrl_term
+    return ham
 
 def hji_vi_loss(x, l, V, dVdt, dVdx):
     """
@@ -106,5 +132,23 @@ def hji_vi_loss(x, l, V, dVdt, dVdx):
     returns:
         h2:   torch tensor with shape [batch_size]
     """
-    # YOUR CODE HERE
-    pass
+    # 1. Compute the Hamiltonian H(x, dVdx)
+    ham = hamiltonian(x, dVdx)
+
+    # 2. Compute the PDE residual (dVdt + H)
+    pde_residual = dVdt + ham
+
+    # 3. Compute the Boundary residual (l - V)
+    # For a BRT, V is capped by the distance to failure (l).
+    # If V tries to exceed l, the VI is violated.
+    boundary_residual = l - V
+
+    # 4. Compute the HJI-VI residual
+    # The VI requires the minimum of these two terms to be zero.
+    # torch.min compares tensors element-wise across the batch.
+    vi_residual = torch.min(pde_residual, boundary_residual)
+
+    # 5. Return the absolute error (magnitude of the violation)
+    h2 = torch.abs(vi_residual)
+
+    return h2
